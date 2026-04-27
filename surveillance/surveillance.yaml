@@ -1,4 +1,4 @@
-openapi: 3.2.0
+openapi: 3.0.4
 info:
   title: Standard Air Traffic Surveillance API Interfaces
   version: 0.1.0
@@ -866,8 +866,7 @@ components:
           description: >-
             RFC3339-formatted time/date string.  The time zone must be 'Z'.
           format: date-time
-          examples:
-            - "1985-04-12T23:20:50.52Z"
+          example: "1985-04-12T23:20:50.52Z"
         format:
           type: string
           enum:
@@ -884,9 +883,9 @@ components:
             Distance from the centerpoint of a circular area, along the WGS84
             ellipsoid.
           type: number
-          exclusiveMinimum: 0
-          examples:
-            - 300.183
+          minimum: 0
+          exclusiveMinimum: true
+          example: 300.183
         units:
           type: string
           description: >-
@@ -1032,8 +1031,7 @@ components:
             meters and must have a minimum resolution of 1 meter.  Invalid, No
             Value or Unknown is -1000 m."
           type: number
-          examples:
-            - 1321.2
+          example: 1321.2
           default: -1000
         pressure_altitude:
           format: float
@@ -1057,8 +1055,7 @@ components:
         format:
           description: Data source data format
           type: string
-          examples:
-            - "asterix-cat21"
+          example: "asterix-cat21"
         data:
           description: Raw data
           type: string
@@ -1078,22 +1075,24 @@ components:
       description: Degrees of latitude north of the equator, with reference to the
         WGS84 ellipsoid.  Invalid, No Value, or Unknown is 0 degrees (both
         Lat/Lon).
-      exclusiveMaximum: 90
-      exclusiveMinimum: -90
+      maximum: 90
+      exclusiveMaximum: true
+      minimum: -90
+      exclusiveMinimum: true
       type: number
-      examples:
-        - 34.123
+      example: 34.123
       default: 0
     Longitude:
       format: double
       description: Degrees of longitude east of the Prime Meridian, with reference to
         the WGS84 ellipsoid.  Invalid, No Value, or Unknown is 0 degrees (both
         Lat/Lon).
-      exclusiveMaximum: 180
-      exclusiveMinimum: -180
+      maximum: 180
+      exclusiveMaximum: true
+      minimum: -180
+      exclusiveMinimum: true
       type: number
-      examples:
-        - -118.456
+      example: -118.456
       default: 0
     LatLngPoint:
       description: Point on the earth's surface.
@@ -1122,10 +1121,11 @@ components:
             –1000 m.
           type: number
           format: double
-          exclusiveMinimum: -8000
-          exclusiveMaximum: 100000
-          examples:
-            - 19.5
+          minimum: -8000
+          exclusiveMinimum: true
+          maximum: 100000
+          exclusiveMaximum: true
+          example: 19.5
         reference:
           description: >-
             A code indicating the reference for a vertical distance. See AIXM
@@ -1152,21 +1152,18 @@ components:
           description: The ICAO hex code broadcast by the transponder. This is a six-digit
             hexadecimal [0-9,a-f] code.
           type: string
-          examples:
-            - abcd01
+          example: abcd01
         icao_type:
           description: The standard aircraft type code as published by the ICAO. For
             example, a Cessna 172 is “C172” and a Boeing 777-300 is “B773”
           type: string
-          examples:
-            - C172
+          example: C172
             - B773
         registration:
           description: Aircraft Registration or “Tail Number”. These should be entered in
             all caps.
           type: string
-          examples:
-            - N123AB
+          example: N123AB
     AircraftType:
       enum:
         - NotDeclared
@@ -1210,26 +1207,27 @@ components:
             resolution of 1 degree.  If aircraft is not moving horizontally, use
             the "Unknown" value.  A value of 361 indicates invalid, no value, or
             unknown.
-          exclusiveMaximum: 361
-          exclusiveMinimum: 0
+          maximum: 361
+          exclusiveMaximum: true
+          minimum: 0
+          exclusiveMinimum: true
           type: number
           default: 361
         speed:
           format: float
           description: Ground speed of flight in meters per second.  Invalid, No Value, or
             Unknown is 255 m/s, if speed is >254.25 m/s then report 254.25 m/s.
-          exclusiveMinimum: 0
+          minimum: 0
+          exclusiveMinimum: true
           type: number
-          examples:
-            - 1.9
+          example: 1.9
           default: 255
         vertical_speed:
           format: float
           description: Speed up (vertically) WGS84-HAE, m/s.  Invalid, No Value, or
             Unknown is 63 m/s, if speed is >62 m/s then report 62 m/s.
           type: number
-          examples:
-            - 0.2
+          example: 0.2
           default: 63
     Polygon:
       description: >-

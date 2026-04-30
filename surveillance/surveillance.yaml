@@ -337,6 +337,8 @@ paths:
       real-time server sent events for manned aircraft flight information near a
       user.
     get:
+      tags:
+        - sp
       operationId: streamFlights
       responses:
         200:

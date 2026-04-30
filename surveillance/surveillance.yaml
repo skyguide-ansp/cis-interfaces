@@ -333,7 +333,7 @@ paths:
         in: path
         required: true
   /uss/flights/stream:
-    description: This endpoint may be called by traffic display providers to receive
+    description: This endpoint may be called by surveillance display providers to receive
       real-time server sent events for manned aircraft flight information near a
       user.
     get:

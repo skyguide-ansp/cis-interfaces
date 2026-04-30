@@ -1357,7 +1357,7 @@ components:
         - subscription
       type: object
       properties:
-        surveilled_area:
+        surveilled_areas:
           description: Traffic Surveilled Areas in or near the subscription area at
             the time of creation/update, if `traffic_surveilled_area_url`
             callback was specified.

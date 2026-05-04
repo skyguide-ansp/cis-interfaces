@@ -37,7 +37,7 @@ paths:
             format: date-time
             type: string
           in: query
-          required: true
+          required: false
         - name: latest_time
           description: If specified, indicates non-interest in any Traffic Surveilled
             Areas that start after this time.  RFC 3339 format, per OpenAPI
@@ -46,7 +46,7 @@ paths:
             format: date-time
             type: string
           in: query
-          required: true
+          required: false
       responses:
         200:
           content:

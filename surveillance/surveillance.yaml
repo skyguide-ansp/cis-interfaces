@@ -378,7 +378,7 @@ paths:
       security:
         - Authority:
             - surveillance.display_provider
-      summary: /uss/aircraft
+      summary: /uss/flights/stream
       description: Retrieve basic manned aircraft information from a surveillance service
         provider. This endpoint will be called by traffic display providers to
         display basic manned aircraft positions near a user in real time.

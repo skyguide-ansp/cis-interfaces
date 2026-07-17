@@ -18,3 +18,4 @@ actions:
         geozone_ed318:
           description: >-
             The ED-318 geo zone from which this constraint originates
+          type: object

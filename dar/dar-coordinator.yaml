@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: DAR Coordinator API
+  version: 0.1.0
+  description: |-
+    Interface for Dynamic Airspace Reconfiguration (DAR) coordination.
+
+    The `/dar_sandbox` endpoints are test-only endpoints for exercising the
+    DAR lifecycle. The `/uss` callback endpoint is used by USSPs to report
+    that they have vacated a DAR.
+servers:
+  - url: .
+tags:
+  - name: DAR Coordinator
+    description: Dynamic Airspace Reconfiguration coordination.
+paths:
+  /dar_sandbox/v1/dars:
+    post:
+      tags:
+        - DAR Coordinator
+      summary: Create and publish a test DAR.
+      operationId: createDAR
+      description: >-
+        Test-only sandbox endpoint. Creates a DAR for the specified future
+        time window and publishes its associated constraint.
+      security:
+        - Authority:
+            - utm.dar_vacated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DARCreationRequest'
+      responses:
+        '201':
+          description: Test DAR was created and published successfully.
+        '400':
+          description: The request body was malformed or did not include a DAR ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '401':
+          description: The request did not contain a valid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '403':
+          description: The access token does not have the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '409':
+          description: The DAR ID already exists or another DAR is active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '500':
+          description: DAR creation or publication failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+  /dar_sandbox/v1/dars/{dar_id}:
+    get:
+      tags:
+        - DAR Coordinator
+      summary: Retrieve a test DAR status.
+      operationId: getDARStatus
+      description: Test-only sandbox endpoint.
+      security:
+        - Authority:
+            - utm.dar_vacated
+      parameters:
+        - $ref: '#/components/parameters/DARID'
+      responses:
+        '200':
+          description: Test DAR status was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARStatus'
+        '401':
+          description: The request did not contain a valid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '403':
+          description: The access token does not have the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '404':
+          description: The DAR does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '500':
+          description: DAR status retrieval failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+    delete:
+      tags:
+        - DAR Coordinator
+      summary: Deactivate a test DAR.
+      operationId: deactivateDAR
+      description: Test-only sandbox endpoint.
+      security:
+        - Authority:
+            - utm.dar_vacated
+      parameters:
+        - $ref: '#/components/parameters/DARID'
+      responses:
+        '204':
+          description: Test DAR was deactivated successfully.
+        '401':
+          description: The request did not contain a valid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '403':
+          description: The access token does not have the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '404':
+          description: The DAR does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '500':
+          description: DAR deactivation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+  /uss/v1/dars/{dar_id}/vacated:
+    post:
+      tags:
+        - DAR Coordinator
+      summary: Notify the DAR Coordinator that a USS has vacated a DAR.
+      operationId: markDARVacated
+      description: >-
+        Records the authenticated USS subject as having vacated the DAR. This
+        callback has no request body.
+      security:
+        - Authority:
+            - utm.dar_vacated
+      parameters:
+        - $ref: '#/components/parameters/DARID'
+      responses:
+        '204':
+          description: The authenticated USS was recorded as having vacated the DAR.
+        '401':
+          description: The request did not contain an authenticated USS subject.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '403':
+          description: The access token does not have the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '404':
+          description: The DAR does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+        '500':
+          description: Recording the callback failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DARCoordinatorError'
+components:
+  securitySchemes:
+    Authority:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/oauth/token
+          scopes:
+            utm.dar_vacated: >-
+              Client may manage a Dynamic Airspace Reconfiguration through the
+              DAR Coordinator sandbox and notify the Coordinator that it has
+              vacated it.
+  parameters:
+    DARID:
+      name: dar_id
+      in: path
+      required: true
+      description: Identifier of the DAR.
+      schema:
+        type: string
+  schemas:
+    DARCreationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - start_time
+        - end_time
+      properties:
+        id:
+          type: string
+          description: Non-empty identifier for the DAR.
+        start_time:
+          type: string
+          format: date-time
+          description: Start of the DAR activation window. It must be in the future.
+        end_time:
+          type: string
+          format: date-time
+          description: End of the DAR activation window. It must be after start_time.
+    DARStatus:
+      type: object
+      required:
+        - id
+        - status
+        - notified_uss_urls
+        - vacated_subjects
+      properties:
+        id:
+          type: string
+          description: Identifier of the DAR.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - DEACTIVATED
+            - FAILED
+        notified_uss_urls:
+          type: array
+          description: Callback URLs notified when the DAR was activated.
+          items:
+            type: string
+            format: uri
+        vacated_subjects:
+          type: array
+          description: Authenticated USS subjects that reported the DAR vacated.
+          items:
+            type: string
+    DARCoordinatorError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Human-readable explanation of the error.

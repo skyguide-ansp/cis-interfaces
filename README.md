@@ -4,6 +4,8 @@ This project contains specifications for the u-space data provisioning and excha
 
 ## Geo-Awareness
 
+The geo-awareness automated testing interface is defined in [geoawareness.yaml](./geoawareness/geoawareness.yaml). Clear-area uses the ASTM-shaped [Volume4D](./geoawareness/volume.yaml) subset defined alongside it.
+
 ED-318 geozones distribution is done through ASTM UTM [F3548-22](https://github.com/interuss/astm-utm-protocol/) Constraints.
 
 The set of changes from the official specification is defined in the OpenAPI overlay [utm-overlay.yaml](./geoawareness/utm-overlay.yaml):

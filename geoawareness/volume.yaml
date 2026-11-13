@@ -1,0 +1,142 @@
+openapi: 3.0.2
+info:
+  title: ASTM F3548 volume shapes for geo-awareness testing
+  version: 0.1.0
+  description: >-
+    Volume4D subset from ASTM F3548-21 used by the geo-awareness clear-area
+    operation. Defined here so this repository stays self-contained.
+components:
+  schemas:
+    Time:
+      type: object
+      required:
+        - value
+        - format
+      properties:
+        value:
+          type: string
+          format: date-time
+          description: RFC3339-formatted time. The time zone must be Z.
+          example: "1985-04-12T23:20:50.52Z"
+        format:
+          type: string
+          enum:
+            - RFC3339
+    Radius:
+      type: object
+      required:
+        - value
+        - units
+      properties:
+        value:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          description: Distance from the center along the WGS84 ellipsoid.
+          example: 300.183
+        units:
+          type: string
+          description: FIXM-compatible units. Only meters are acceptable for UTM.
+          enum:
+            - M
+    Altitude:
+      type: object
+      required:
+        - value
+        - reference
+        - units
+      properties:
+        value:
+          type: number
+          format: double
+          minimum: -8000
+          maximum: 100000
+          description: Numeric altitude in meters above the WGS84 ellipsoid.
+        reference:
+          type: string
+          description: Vertical reference. Only WGS84 (W84) is accepted for UTM.
+          enum:
+            - W84
+        units:
+          type: string
+          description: Altitude unit. Only meters are accepted for UTM.
+          enum:
+            - M
+    Latitude:
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+      description: Degrees of latitude north of the equator, WGS84.
+      example: 34.123
+    Longitude:
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+      description: Degrees of longitude east of the Prime Meridian, WGS84.
+      example: -118.456
+    LatLngPoint:
+      type: object
+      required:
+        - lat
+        - lng
+      description: Point on the earth's surface.
+      properties:
+        lat:
+          $ref: "#/components/schemas/Latitude"
+        lng:
+          $ref: "#/components/schemas/Longitude"
+    Polygon:
+      type: object
+      description: >-
+        Enclosed area. Edges are the shortest paths between vertices and must
+        not cross. Vertices must not be duplicated, and the final vertex must
+        not repeat the first. Winding order is the one that produces the
+        smaller area.
+      required:
+        - vertices
+      properties:
+        vertices:
+          type: array
+          minItems: 3
+          items:
+            $ref: "#/components/schemas/LatLngPoint"
+    Circle:
+      type: object
+      description: A circular area on the surface of the earth.
+      required:
+        - center
+        - radius
+      properties:
+        center:
+          $ref: "#/components/schemas/LatLngPoint"
+        radius:
+          $ref: "#/components/schemas/Radius"
+    Volume3D:
+      type: object
+      description: >-
+        Vertically extruded shape. Exactly one of outline_circle and
+        outline_polygon must be set.
+      properties:
+        outline_circle:
+          $ref: "#/components/schemas/Circle"
+        outline_polygon:
+          $ref: "#/components/schemas/Polygon"
+        altitude_lower:
+          $ref: "#/components/schemas/Altitude"
+        altitude_upper:
+          $ref: "#/components/schemas/Altitude"
+    Volume4D:
+      type: object
+      description: Contiguous block of geographic spacetime.
+      required:
+        - volume
+      properties:
+        volume:
+          $ref: "#/components/schemas/Volume3D"
+        time_start:
+          $ref: "#/components/schemas/Time"
+        time_end:
+          $ref: "#/components/schemas/Time"

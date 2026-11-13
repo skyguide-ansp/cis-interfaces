@@ -1,0 +1,377 @@
+openapi: 3.0.2
+info:
+  title: Geo-Awareness Automated Testing Interface
+  version: 0.1.0
+  license:
+    name: Apache License v2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  description: >-
+    Interface implemented by a Common Information Service so that a USSP can
+    publish temporary constraints, under the CIS identity, and observe that its
+    own system reacts to them.
+
+    The USSP submits an ED-318 feature collection. The service publishes each
+    feature as a DSS constraint then removes only those constraints when the test 
+    ends or when a clear-area request covers them. Constraints the service did not create,
+    including permanent airspaces, are left in place.
+
+    A client receives a test id immediately. Publication and deletion continue
+    asynchronously; the client reads the test status until it is Ready, Deleted,
+    or Error.
+
+    Unless otherwise specified, fields sent by a client but not declared in this
+    API must be ignored.
+servers:
+  - url: https://cis.example.com/geoawareness/v1
+components:
+  securitySchemes:
+    TestAuthority:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.com/oauth/token
+          scopes:
+            interuss.geoawareness.direct_automated_test: >-
+              Client may create geo-awareness tests, read their status, mark
+              them done, and clear areas of constraints this interface created.
+      description: >-
+        Authorization for automated geo-awareness testing.
+
+        Access tokens are JSON Web Tokens as defined in RFC 7519, signed with
+        RS256. The token must include exp no further than 1 hour ahead, sub as
+        the client id, scope as a space-separated list per RFC 6749, and aud as
+        the hostname of the URL being called. Clients send the token in an
+        Authorization header as "Bearer <token>" per RFC 6750.
+  schemas:
+    UUIDv4:
+      type: string
+      format: uuid
+      minLength: 36
+      maxLength: 36
+      pattern: >-
+        ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+      description: Version-4 UUID as defined by RFC 4122.
+      example: 03e5572a-f733-49af-bc14-8a18bd53ee39
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Human-readable explanation of the failure.
+    GeoZoneFeatureCollection:
+      type: object
+      description: >-
+        ED-318 GeoJSON FeatureCollection as defined by
+        https://github.com/UASGeoZones/ED-318/blob/main/schema/Schema_GeoZones.json.
+        The service validates the document against that schema. Each feature
+        must have non-null properties and geometry, and country plus identifier
+        must be unique within the collection.
+        The service publishes the features unchanged.
+      additionalProperties: true
+      required:
+        - type
+        - features
+      properties:
+        type:
+          type: string
+          enum:
+            - FeatureCollection
+        features:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/GeoZoneFeature"
+    GeoZoneFeature:
+      type: object
+      description: One ED-318 GeoJSON Feature. Unknown properties are preserved.
+      additionalProperties: true
+      required:
+        - type
+        - properties
+        - geometry
+      properties:
+        type:
+          type: string
+          enum:
+            - Feature
+        properties:
+          type: object
+          additionalProperties: true
+        geometry:
+          type: object
+          additionalProperties: true
+    CreateTestRequest:
+      type: object
+      required:
+        - geozones
+      properties:
+        geozones:
+          $ref: "#/components/schemas/GeoZoneFeatureCollection"
+        request_id:
+          type: string
+          maxLength: 255
+          description: >-
+            Optional idempotency key. A repeat with the same key and the same
+            geozones returns the existing test. The same key with different
+            geozones is rejected.
+    TestStatus:
+      type: string
+      enum:
+        - Activating
+        - Ready
+        - Deactivating
+        - Deleted
+        - Error
+      description: >-
+        Activating means the constraints are being published. Ready means they
+        are published. Deactivating means they are being removed. Deleted means
+        they have been removed; the test record remains. Error means setup or
+        deletion failed and message is set. A failed setup leaves no constraints
+        created for that test.
+    Test:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/UUIDv4"
+        status:
+          $ref: "#/components/schemas/TestStatus"
+        message:
+          type: string
+          description: Required when status is Error. Otherwise omitted.
+    TestResponse:
+      type: object
+      required:
+        - test
+      properties:
+        test:
+          $ref: "#/components/schemas/Test"
+    ClearAreaRequest:
+      type: object
+      required:
+        - extent
+      properties:
+        request_id:
+          type: string
+          maxLength: 255
+          description: >-
+            Optional identifier for this clear request. A repeat may run the
+            clear again; clearing constraints this interface already removed is
+            successful.
+        extent:
+          $ref: "./volume.yaml#/components/schemas/Volume4D"
+    ClearAreaOutcome:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: >-
+            True only when every constraint that was both created by the harness and intersecting the extent
+            was removed, or none existed.
+            Callers should note that 'fixed' constraints (such as restricted traffic control airspaces around 
+            airports) will be ignored by the requests to clear areas: if a clear area request's extent contains 
+            such a fixed constraint, said constraint will remain while the outcome's success flag 
+            will still be 'true' (if the request has not otherwise failed).
+        message:
+          type: string
+          description: Present when the area could not be fully cleared.
+    ClearAreaResponse:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          $ref: "#/components/schemas/ClearAreaOutcome"
+  parameters:
+    TestID:
+      name: test_id
+      in: path
+      required: true
+      description: Identifier returned when the test was created.
+      schema:
+        $ref: "#/components/schemas/UUIDv4"
+paths:
+  /tests:
+    post:
+      operationId: CreateTest
+      summary: Submit a geo-awareness test
+      description: >-
+        Accepts an ED-318 feature collection and returns a new test id. The
+        constraints are published asynchronously. Tests may overlap; each is
+        removed by its own id or by clear-area.
+      security:
+        - TestAuthority:
+            - interuss.geoawareness.direct_automated_test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTestRequest"
+      responses:
+        "202":
+          description: The test was accepted and publication has started.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponse"
+        "200":
+          description: >-
+            request_id matched an existing test with the same geozones. The
+            existing test is returned and no new constraints are published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponse"
+        "400":
+          description: >-
+            The collection is not valid ED-318, a feature has null properties
+            or geometry, or two features share country and identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Token did not include the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: request_id matched an existing test with different geozones.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tests/{test_id}:
+    parameters:
+      - $ref: "#/components/parameters/TestID"
+    get:
+      operationId: GetTest
+      summary: Status of a geo-awareness test
+      description: >-
+        Returns the test lifecycle. A deleted test is returned with status
+        Deleted rather than 404.
+      security:
+        - TestAuthority:
+            - interuss.geoawareness.direct_automated_test
+      responses:
+        "200":
+          description: The test exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponse"
+        "401":
+          description: Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Token did not include the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No test has been issued with this id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: DeleteTest
+      summary: Mark a geo-awareness test done
+      description: >-
+        Removes the constraints published for this test. Repeating the call
+        while deletion is in progress, or after the test is Deleted, returns
+        the current record.
+      security:
+        - TestAuthority:
+            - interuss.geoawareness.direct_automated_test
+      responses:
+        "202":
+          description: Deletion has started, is in progress, or already finished.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResponse"
+        "401":
+          description: Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Token did not include the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No test has been issued with this id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /clear_area_requests:
+    post:
+      operationId: ClearArea
+      summary: Clear harness constraints in an area
+      description: >-
+        Deletes every constraint this interface created whose geometry
+        intersects the extent. The call is rejected when an intersecting test is still
+        Activating or Deactivating.
+      security:
+        - TestAuthority:
+            - interuss.geoawareness.direct_automated_test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearAreaRequest"
+      responses:
+        "200":
+          description: The clear request finished.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClearAreaResponse"
+        "400":
+          description: The extent is missing an outline or is otherwise invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Bearer token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Token did not include the required scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: An intersecting test is Activating or Deactivating.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

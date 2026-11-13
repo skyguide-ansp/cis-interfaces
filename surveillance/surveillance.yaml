@@ -872,78 +872,10 @@ components:
           type: string
           enum:
             - RFC3339
-    Radius:
-      required:
-        - value
-        - units
-      type: object
-      properties:
-        value:
-          format: float
-          description: >-
-            Distance from the centerpoint of a circular area, along the WGS84
-            ellipsoid.
-          type: number
-          exclusiveMinimum: 0
-          examples:
-            - 300.183
-        units:
-          type: string
-          description: >-
-            FIXM-compatible units.  Only meters ("M") are acceptable for UTM.
-          enum:
-            - M
-    Circle:
-      description: A circular area on the surface of the earth.
-      type: object
-      properties:
-        center:
-          $ref: "#/components/schemas/LatLngPoint"
-        radius:
-          $ref: "#/components/schemas/Radius"
     Volume3D:
-      description: >-
-        A three-dimensional geographic volume consisting of a
-        vertically-extruded shape. Exactly one outline must be specified.
-      type: object
-      properties:
-        outline_circle:
-          anyOf:
-            - $ref: "#/components/schemas/Circle"
-          description: A circular geographic shape on the surface of the earth.
-        outline_polygon:
-          anyOf:
-            - $ref: "#/components/schemas/Polygon"
-          description: >-
-            A polygonal geographic shape on the surface of the earth.
-        altitude_lower:
-          description: >-
-            Minimum bounding altitude of this volume. Must be less than
-            altitude_upper, if specified.
-          anyOf:
-            - $ref: "#/components/schemas/Altitude"
-        altitude_upper:
-          description: >-
-            Maximum bounding altitude of this volume. Must be greater than
-            altitude_lower, if specified.
-          anyOf:
-            - $ref: "#/components/schemas/Altitude"
+      $ref: "../common/volume.yaml#/components/schemas/Volume3D"
     Volume4D:
-      description: Contiguous block of geographic spacetime.
-      required:
-        - volume
-      type: object
-      properties:
-        volume:
-          $ref: "#/components/schemas/Volume3D"
-        time_start:
-          description: Beginning time of this volume. Must be before time_end.
-          anyOf:
-            - $ref: "#/components/schemas/Time"
-        time_end:
-          description: End time of this volume. Must be after time_start.
-          anyOf:
-            - $ref: "#/components/schemas/Time"
+      $ref: "../common/volume.yaml#/components/schemas/Volume4D"
     GetSubscriptionResponse:
       description: Response to DSS request for the subscription with the given id.
       required:

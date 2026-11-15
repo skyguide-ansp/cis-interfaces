@@ -2,7 +2,13 @@
 
 This project contains specifications for the u-space data provisioning and exchange between the CIS and USS.
 
+## Common
+
+ASTM F3548-shaped volumes shared across CIS OpenAPI documents live in [common/volume.yaml](./common/volume.yaml). Specs reference `Volume4D` (and its component schemas) from there instead of duplicating them.
+
 ## Geo-Awareness
+
+The geo-awareness automated testing interface is defined in [geoawareness.yaml](./geoawareness/geoawareness.yaml). Clear-area `extent` uses [Volume4D](./common/volume.yaml).
 
 ED-318 geozones distribution is done through ASTM UTM [F3548-22](https://github.com/interuss/astm-utm-protocol/) Constraints.
 
@@ -27,4 +33,4 @@ All DAR Coordinator endpoints require the `utm.dar_vacated` scope.
 
 The distribution of ATC surveillance data follows the data-sharing principles established in the ASTM RemoteID [F3411-22](https://github.com/uastech/standards) standard.
 
-The specification for surveillance data exchange is defined in this OpenAPI [surveillance.yaml](./surveillance/surveillance.yaml).
+The specification for surveillance data exchange is defined in this OpenAPI [surveillance.yaml](./surveillance/surveillance.yaml). Spatial query and subscription parameters that use `Volume4D` reference [common/volume.yaml](./common/volume.yaml).
